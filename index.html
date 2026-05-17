@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#0e0e10" />
+<title>Launchpad</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23e7c66b'/%3E%3Cpath d='M50 22 L70 60 H30 Z' fill='%230e0e10'/%3E%3Crect x='44' y='60' width='12' height='14' rx='2' fill='%230e0e10'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0e0e10;
+    --panel: #16161a;
+    --panel-hover: #1d1d22;
+    --border: #232328;
+    --border-hover: #3a3a42;
+    --fg: #f3f3f0;
+    --muted: #8a8a85;
+    --muted-2: #6a6a65;
+    --accent: #e7c66b;
+    --accent-ink: #1a1a14;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 56px 28px 80px;
+  }
+  @media (max-width: 640px) { .wrap { padding: 36px 18px 60px; } }
+
+  header {
+    margin-bottom: 48px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1.05;
+  }
+  .sub { color: var(--muted); margin: 4px 0 0; font-size: 14px; }
+  .stamp {
+    color: var(--muted-2);
+    font-size: 12px;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Section */
+  section { margin-top: 40px; }
+  .section-label {
+    color: var(--muted-2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  /* Grid of cards */
+  .grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 140px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover {
+    background: var(--panel-hover);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+  }
+  .card:hover .card-arrow { transform: translate(3px, -3px); color: var(--accent); }
+
+  .card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    background: rgba(231, 198, 107, 0.1);
+  }
+  .card-arrow {
+    color: var(--muted-2);
+    font-size: 18px;
+    transition: all 0.15s ease;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .card-desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+    flex: 1;
+  }
+  .card-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .tag-accent {
+    background: rgba(231, 198, 107, 0.12);
+    color: var(--accent);
+    border-color: transparent;
+  }
+  .tag-green { color: #6ec27a; background: rgba(110, 194, 122, 0.12); border-color: transparent; }
+  .tag-blue { color: #7aa8d8; background: rgba(122, 168, 216, 0.12); border-color: transparent; }
+
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted-2);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">▲</div>
+      <div>
+        <h1>Launchpad</h1>
+        <p class="sub">Every site I've built, one tap away.</p>
+      </div>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <section>
+    <div class="section-label">Personal</div>
+    <div class="grid">
+      <a class="card" href="https://jarvis-dashboard.netlify.app/" target="_blank" rel="noopener">
+        <div class="card-head">
+          <div class="card-icon">🔥</div>
+          <span class="card-arrow">↗</span>
+        </div>
+        <h2 class="card-title">Jarvis Dashboard</h2>
+        <p class="card-desc">Personal life cockpit. Finances, habits, goals, daily and weekly tracking.</p>
+        <div class="card-meta">
+          <span class="tag tag-accent">Dashboard</span>
+          <span class="tag">Supabase</span>
+        </div>
+      </a>
+
+      <a class="card" href="https://michaels-corner.netlify.app/" target="_blank" rel="noopener">
+        <div class="card-head">
+          <div class="card-icon">🎬</div>
+          <span class="card-arrow">↗</span>
+        </div>
+        <h2 class="card-title">Michael's Corner</h2>
+        <p class="card-desc">Personal brand HQ. Scripts, ideas, set design, publishing checklists per platform.</p>
+        <div class="card-meta">
+          <span class="tag tag-accent">App</span>
+          <span class="tag">Supabase</span>
+        </div>
+      </a>
+
+      <a class="card" href="https://hunterpart.netlify.app/" target="_blank" rel="noopener">
+        <div class="card-head">
+          <div class="card-icon">🏠</div>
+          <span class="card-arrow">↗</span>
+        </div>
+        <h2 class="card-title">Hunterpart</h2>
+        <p class="card-desc">Prague apartment hunt. Scrapes Sreality, Bezrealitky, iDnes — all in one dashboard.</p>
+        <div class="card-meta">
+          <span class="tag tag-blue">Tool</span>
+          <span class="tag">Scraper</span>
+        </div>
+      </a>
+
+      <a class="card" href="https://lift-up.netlify.app/" target="_blank" rel="noopener">
+        <div class="card-head">
+          <div class="card-icon">💪</div>
+          <span class="card-arrow">↗</span>
+        </div>
+        <h2 class="card-title">LiftUp</h2>
+        <p class="card-desc">See what an impulse buy actually costs in hours of your life. Free, no signup.</p>
+        <div class="card-meta">
+          <span class="tag tag-green">Public</span>
+          <span class="tag">Web app</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Off-Plate</div>
+    <div class="grid">
+      <a class="card" href="https://off-plate.github.io/audits/" target="_blank" rel="noopener">
+        <div class="card-head">
+          <div class="card-icon">📋</div>
+          <span class="card-arrow">↗</span>
+        </div>
+        <h2 class="card-title">Audits</h2>
+        <p class="card-desc">Client website audit deliverables. EduJoy, Maserstvi Jiri, and others — shareable links.</p>
+        <div class="card-meta">
+          <span class="tag tag-green">Public</span>
+          <span class="tag">GH Pages</span>
+        </div>
+      </a>
+
+      <a class="card" href="https://github.com/off-plate" target="_blank" rel="noopener">
+        <div class="card-head">
+          <div class="card-icon">🐙</div>
+          <span class="card-arrow">↗</span>
+        </div>
+        <h2 class="card-title">GitHub — off-plate</h2>
+        <p class="card-desc">All repos. Every project lives here.</p>
+        <div class="card-meta">
+          <span class="tag">Source</span>
+        </div>
+      </a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  Launchpad · <span id="count"></span>
+</footer>
+
+<script>
+  // Stamp + count
+  document.getElementById('stamp').textContent = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  document.getElementById('count').textContent = document.querySelectorAll('.card').length + ' destinations';
+</script>
+</body>
+</html>
