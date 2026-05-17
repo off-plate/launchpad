@@ -9,6 +9,7 @@ One page. Every site I've built. One tap away.
 - Michael's Corner — https://michaels-corner.netlify.app/
 - Hunterpart — https://hunterpart.netlify.app/
 - LiftUp — https://lift-up.netlify.app/
+- Zepp Health — https://zepp-health.netlify.app/
 
 **Off-Plate**
 - Audits — https://off-plate.github.io/audits/
