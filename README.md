@@ -5,7 +5,7 @@ One page. Every site I've built. One tap away.
 ## What's listed
 
 **Personal**
-- Jarvis Dashboard — https://jarvis-dashboard.netlify.app/
+- Jarvis Dashboard — https://personal-dashboard-jarvis.netlify.app/
 - Michael's Corner — https://michaels-corner.netlify.app/
 - Hunterpart — https://hunterpart.netlify.app/
 - LiftUp — https://lift-up.netlify.app/
