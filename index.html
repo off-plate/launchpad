@@ -179,6 +179,39 @@
   .tag-green { color: #6ec27a; background: rgba(110, 194, 122, 0.12); border-color: transparent; }
   .tag-blue { color: #7aa8d8; background: rgba(122, 168, 216, 0.12); border-color: transparent; }
 
+  /* Filter bar */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 28px 0 0;
+  }
+  .filter-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .filter-btn:hover {
+    color: var(--fg);
+    border-color: var(--border-hover);
+  }
+  .filter-btn.active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+  }
+  .card.hidden { display: none; }
+  section.hidden { display: none; }
+
   footer {
     margin-top: 80px;
     padding-top: 24px;
@@ -201,6 +234,8 @@
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
+
+  <div class="filters" id="filters"></div>
 
   <section>
     <div class="section-label">Personal</div>
@@ -356,6 +391,40 @@
   // Stamp + count
   document.getElementById('stamp').textContent = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   document.getElementById('count').textContent = document.querySelectorAll('.card').length + ' destinations';
+
+  // Build filter buttons from unique tags
+  const cards = Array.from(document.querySelectorAll('.card'));
+  const tagSet = new Set();
+  cards.forEach(card => {
+    card.querySelectorAll('.tag').forEach(t => tagSet.add(t.textContent.trim()));
+  });
+  const tags = ['All', ...Array.from(tagSet).sort()];
+  const filterBar = document.getElementById('filters');
+  tags.forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (tag === 'All' ? ' active' : '');
+    btn.textContent = tag;
+    btn.dataset.tag = tag;
+    btn.addEventListener('click', () => applyFilter(tag));
+    filterBar.appendChild(btn);
+  });
+
+  function applyFilter(tag) {
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tag === tag);
+    });
+    cards.forEach(card => {
+      const cardTags = Array.from(card.querySelectorAll('.tag')).map(t => t.textContent.trim());
+      const show = tag === 'All' || cardTags.includes(tag);
+      card.classList.toggle('hidden', !show);
+    });
+    document.querySelectorAll('section').forEach(sec => {
+      const anyVisible = sec.querySelectorAll('.card:not(.hidden)').length > 0;
+      sec.classList.toggle('hidden', !anyVisible);
+    });
+    const visible = document.querySelectorAll('.card:not(.hidden)').length;
+    document.getElementById('count').textContent = visible + ' destinations';
+  }
 </script>
 </body>
 </html>
