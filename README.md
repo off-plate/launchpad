@@ -1,25 +1,18 @@
 # Launchpad
 
-One page. Every site I've built. One tap away.
+Personal cockpit. Every site I've built plus calendar, todo, pomodoro, clock, and a quote — one page.
 
-## What's listed
+## Add a new app
 
-**Personal**
-- Jarvis Dashboard — https://personal-dashboard-jarvis.netlify.app/
-- Michael's Corner — https://michaels-corner.netlify.app/
-- Hunterpart — https://hunterpart.netlify.app/
-- LiftUp — https://lift-up.netlify.app/
-- Zepp Health — https://zepp-health.netlify.app/
-- 30 Years — https://off-plate.github.io/30years/
+Edit `data.js`. Add an entry under `apps.personal`, `apps.offplate`, or `apps.tools`:
 
-**Off-Plate**
-- Audits — https://off-plate.github.io/audits/
-- GitHub org — https://github.com/off-plate
+```js
+{ name: "Name", glyph: "🔥", tag: "Tag", color: ["#hex1","#hex2"], url: "https://...", desc: "Short description" }
+```
 
-## Add a new link
-
-Edit `index.html`. Each card is a `<a class="card" href="...">` block. Copy an existing one, swap title/desc/icon/URL. Commit. Netlify auto-deploys.
+Commit. Netlify auto-deploys.
 
 ## Stack
 
-Single static `index.html`. No build, no dependencies. Hosted on Netlify.
+Static HTML + React 18 + Babel standalone (UMD via CDN). No build step.
+Files: `index.html`, `styles.css`, `data.js`, `widgets.jsx`, `app.jsx`, `tweaks-panel.jsx`.
