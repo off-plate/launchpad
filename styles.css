@@ -28,8 +28,9 @@ html, body {
   margin: 0;
   background: var(--bg-0);
   color: var(--text);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  font-feature-settings: "ss01", "cv11";
+  font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.005em;
   min-height: 100vh;
 }
 body { zoom: 1.25; }

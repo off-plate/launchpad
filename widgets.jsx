@@ -589,7 +589,7 @@ function NowCard() {
         </div>
         <div className="now-item">
           <div className="now-label">Focus</div>
-          <div className="now-val" style={{ fontSize: 16, fontFamily: "'Plus Jakarta Sans'", fontWeight: 600 }}>Ship Launchpad v2</div>
+          <div className="now-val" style={{ fontSize: 16, fontFamily: "'Bricolage Grotesque'", fontWeight: 600 }}>Ship Launchpad v2</div>
           <div className="now-sub">2 / 5 todos done</div>
         </div>
         <div className="now-item">
