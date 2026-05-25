@@ -33,8 +33,12 @@ function ProfileCard({ name = "Michael", handle = "michael@launchpad.dev" }) {
 // ---------- App tile ----------
 function AppTile({ app }) {
   const bg = `linear-gradient(140deg, ${app.color[0]} 0%, ${app.color[1]} 100%)`;
+  const handleClick = (e) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent("lp:open-app", { detail: app }));
+  };
   return (
-    <a className="app-tile" href={app.url} target="_blank" rel="noopener noreferrer" title={app.desc}>
+    <a className="app-tile" href={app.url} onClick={handleClick} title={app.desc}>
       <div className="app-icon" style={{ background: bg }}>
         <span style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }}>{app.glyph}</span>
       </div>
@@ -178,6 +182,7 @@ function TodoCard() {
 
   useEffect(() => {
     try {localStorage.setItem(KEY, JSON.stringify(items));} catch (e) {}
+    window.dispatchEvent(new CustomEvent("lp:todos-changed"));
   }, [items]);
 
   const add = () => {
@@ -321,24 +326,60 @@ function QuoteCard({ auto = true }) {
 }
 
 // ---------- Pomodoro card ----------
-function PomodoroCard() {
+function PomodoroCard({ durationMinutes }) {
   const KEY = "launchpad.pomo.v1";
-  const DEFAULTS = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
+  // Convert minute-based config (from Tweaks) into seconds. Fall back to defaults.
+  const customDur = {
+    focus: Math.max(1, Math.round((durationMinutes && durationMinutes.focus) || 25)) * 60,
+    short: Math.max(1, Math.round((durationMinutes && durationMinutes.short) || 5)) * 60,
+    long:  Math.max(1, Math.round((durationMinutes && durationMinutes.long)  || 15)) * 60
+  };
 
   const [state, setState] = useState(() => {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return { ...parsed, running: false, history: parsed.history || [] };
+        return { ...parsed, running: false, history: parsed.history || [], focusOn: parsed.focusOn || null, durations: customDur };
       }
     } catch (e) {}
-    return { phase: "focus", remaining: DEFAULTS.focus, running: false, completed: 0, durations: DEFAULTS, history: [] };
+    return { phase: "focus", remaining: customDur.focus, running: false, completed: 0, durations: customDur, history: [], focusOn: null };
   });
+
+  // React to changes in Tweaks durations: update phase length, and reset remaining if not running
+  useEffect(() => {
+    setState((s) => {
+      const dur = customDur;
+      const sameAsCurrent = s.durations[s.phase] === dur[s.phase];
+      return {
+        ...s,
+        durations: dur,
+        remaining: s.running || sameAsCurrent ? s.remaining : dur[s.phase]
+      };
+    });
+    // eslint-disable-next-line
+  }, [customDur.focus, customDur.short, customDur.long]);
+
+  // Read open todos for the "focus on" picker
+  const [openTodos, setOpenTodos] = useState(() => readOpenTodos());
+  useEffect(() => {
+    const sync = () => setOpenTodos(readOpenTodos());
+    window.addEventListener("storage", sync);
+    window.addEventListener("lp:todos-changed", sync);
+    const id = setInterval(sync, 3000);
+    return () => { window.removeEventListener("storage", sync); window.removeEventListener("lp:todos-changed", sync); clearInterval(id); };
+  }, []);
 
   useEffect(() => {
     try {localStorage.setItem(KEY, JSON.stringify(state));} catch (e) {}
   }, [state]);
+
+  // Allow the floating pomo (in workspace view) to toggle this timer remotely
+  useEffect(() => {
+    const onToggle = () => setState(s => ({ ...s, running: !s.running }));
+    window.addEventListener("lp:pomo-toggle", onToggle);
+    return () => window.removeEventListener("lp:pomo-toggle", onToggle);
+  }, []);
 
   // Tick loop
   useEffect(() => {
@@ -355,7 +396,8 @@ function PomodoroCard() {
         const entry = {
           ts: Date.now(),
           phase: s.phase,
-          duration: s.durations[s.phase]
+          duration: s.durations[s.phase],
+          focusOn: s.phase === "focus" ? (s.focusOn || null) : null
         };
         const newHistory = [entry, ...(s.history || [])].slice(0, 50);
         beep();
@@ -408,6 +450,8 @@ function PomodoroCard() {
   const choosePhase = (phase) =>
   setState((s) => ({ ...s, phase, remaining: s.durations[phase], running: false }));
 
+  const setFocusOn = (todoText) => setState((s) => ({ ...s, focusOn: todoText || null }));
+
   const clearHistory = () => setState((s) => ({ ...s, history: [], completed: 0 }));
 
   const total = state.durations[state.phase];
@@ -458,23 +502,38 @@ function PomodoroCard() {
           <div className="pomo-time">
             <div className="pomo-phase">{phaseLabel}</div>
             <div className="pomo-clock">{mm}:{ss}</div>
-            <div className="pomo-sublabel">{state.running ? "running" : "paused"}</div>
+            <div className="pomo-sublabel">{state.running ? "running" : "paused"}{state.phase === "focus" && state.focusOn ? " · " + truncate(state.focusOn, 18) : ""}</div>
           </div>
         </div>
 
         <div className="pomo-controls">
+          {state.phase === "focus" && (
+            <div className="pomo-focus-on">
+              <label className="pomo-focus-on-label">Focusing on</label>
+              <select
+                className="pomo-focus-on-select"
+                value={state.focusOn || ""}
+                onChange={(e) => setFocusOn(e.target.value)}
+              >
+                <option value="">— nothing specific —</option>
+                {openTodos.map((t) => (
+                  <option key={t.id} value={t.text}>{t.text}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="pomo-presets">
             <button className={"pomo-preset " + (state.phase === "focus" ? "active" : "")} onClick={() => choosePhase("focus")}>
               <div className="pomo-preset-label">Focus</div>
-              <div className="pomo-preset-time">25:00</div>
+              <div className="pomo-preset-time">{mmss(customDur.focus)}</div>
             </button>
             <button className={"pomo-preset " + (state.phase === "short" ? "active" : "")} onClick={() => choosePhase("short")}>
               <div className="pomo-preset-label">Short</div>
-              <div className="pomo-preset-time">05:00</div>
+              <div className="pomo-preset-time">{mmss(customDur.short)}</div>
             </button>
             <button className={"pomo-preset " + (state.phase === "long" ? "active" : "")} onClick={() => choosePhase("long")}>
               <div className="pomo-preset-label">Long</div>
-              <div className="pomo-preset-time">15:00</div>
+              <div className="pomo-preset-time">{mmss(customDur.long)}</div>
             </button>
           </div>
 
@@ -517,7 +576,10 @@ function PomodoroCard() {
           (state.history || []).slice(0, 8).map((h, i) =>
           <div className="pomo-history-row" key={h.ts + "-" + i}>
                 <div className={"pomo-history-bar p-" + h.phase} />
-                <div className="pomo-history-phase">{h.phase === "focus" ? "Focus" : h.phase === "short" ? "Short break" : "Long break"}</div>
+                <div className="pomo-history-phase">
+                  {h.phase === "focus" ? "Focus" : h.phase === "short" ? "Short break" : "Long break"}
+                  {h.focusOn && <span className="pomo-history-on"> → {truncate(h.focusOn, 28)}</span>}
+                </div>
                 <div className="pomo-history-dur">{Math.round(h.duration / 60)}m</div>
                 <div className="pomo-history-when">{timeAgo(h.ts)}</div>
               </div>
@@ -530,6 +592,25 @@ function PomodoroCard() {
 
 function totalFocusMinutes(history) {
   return Math.round((history || []).filter((h) => h.phase === "focus").reduce((sum, h) => sum + h.duration, 0) / 60);
+}
+
+function readOpenTodos() {
+  try {
+    const raw = localStorage.getItem("launchpad.todos.v1");
+    if (!raw) return [];
+    return (JSON.parse(raw) || []).filter((t) => !t.done);
+  } catch (e) { return []; }
+}
+
+function mmss(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+
+function truncate(s, n) {
+  if (!s) return "";
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
 function timeAgo(ts) {
