@@ -48,13 +48,9 @@ window.LP_DATA = {
     { id: 5, text: "Pay invoices Q2", done: true }
   ],
 
-  // Mock calendar events (keyed by day-of-month for the current month — illustrative)
+  // Calendar events — empty until a real Google Calendar integration is wired up.
   events: {
-    today: [
-      { time: "10:00", title: "Standup — Off-Plate", v: 1 },
-      { time: "13:30", title: "Coffee w/ Tomáš",     v: 2 },
-      { time: "18:00", title: "Gym — push day",      v: 3 }
-    ],
-    eventDays: [3, 8, 12, 19, 23, 28] // marker dots on these days
+    today: [],
+    eventDays: []
   }
 };

@@ -27,7 +27,6 @@ const WIDGETS = {
   todo:       { label: "To-do",           render: ()      => <TodoCard />,          defaultW: 1, defaultH: 1 },
   pomodoro:   { label: "Pomodoro",        render: (t)     => <PomodoroCard durationMinutes={{ focus: t.pomoFocusMin, short: t.pomoShortMin, long: t.pomoLongMin }} />, defaultW: 1, defaultH: 1 },
   quote:      { label: "Today's spark",   render: (t)     => <QuoteCard auto={t.autoQuote} />, defaultW: 1, defaultH: 1 },
-  now:        { label: "Now",             render: ()      => <NowCard />,           defaultW: 1, defaultH: 1 },
   recents:    { label: "Recents",         render: ()      => <RecentsCardV2 />,     defaultW: 3, defaultH: 1 },
   weather:    { label: "Weather",         render: ()      => <WeatherCard />,       defaultW: 1, defaultH: 1 },
   github:     { label: "GitHub activity", render: ()      => <GitHubCard />,        defaultW: 2, defaultH: 1 },
@@ -358,7 +357,7 @@ function LaunchpadApp() {
   // Workspaces CRUD
   const addWorkspace = () => {
     const id = "ws-" + Date.now();
-    setWorkspaces((ps) => [...ps, { id, name: "New workspace", icon: "✦", layout: [{ id: "now", w: 1, h: 1 }], appSelection: { mode: "all", apps: [] } }]);
+    setWorkspaces((ps) => [...ps, { id, name: "New workspace", icon: "✦", layout: [{ id: "today", w: 1, h: 1 }], appSelection: { mode: "all", apps: [] } }]);
     setActiveWorkspaceId(id);
     setEditMode(true);
   };
@@ -819,7 +818,7 @@ function WidgetGallery({ workspace, allWidgets, addWidget, removeWidget, onClose
 function galleryGlyph(id) {
   const map = {
     profile: "👤", apps: "▦", calendar: "📅", todo: "✓", pomodoro: "⏱",
-    quote: "❝", now: "⊙", recents: "↻", weather: "☁",
+    quote: "❝", recents: "↻", weather: "☁",
     github: "</>", hn: "Y", dailyimg: "🖼", focuschart: "📊"
   };
   return map[id] || "✦";

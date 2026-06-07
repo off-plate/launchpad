@@ -3,6 +3,22 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 // ---------- Profile card ----------
 function ProfileCard({ name = "Michael", handle = "michael@launchpad.dev" }) {
+  const stats = useMemo(() => {
+    const apps = window.LP_DATA && window.LP_DATA.apps;
+    const appCount = apps ? apps.personal.length + apps.offplate.length + apps.tools.length : 0;
+    let workspaceCount = 0;
+    try {
+      const raw = localStorage.getItem("launchpad.workspaces.v1");
+      if (raw) workspaceCount = (JSON.parse(raw) || []).length;
+    } catch (e) {}
+    let openTodos = 0;
+    try {
+      const raw = localStorage.getItem("launchpad.todos.v1");
+      if (raw) openTodos = (JSON.parse(raw) || []).filter((t) => !t.done).length;
+    } catch (e) {}
+    return { appCount, workspaceCount, openTodos };
+  }, []);
+
   return (
     <div className="card profile">
       <div className="profile-photo">
@@ -14,75 +30,17 @@ function ProfileCard({ name = "Michael", handle = "michael@launchpad.dev" }) {
       <div className="profile-spacer" />
       <div className="profile-stats">
         <div>
-          <div className="profile-stat-num">14</div>
+          <div className="profile-stat-num">{stats.appCount}</div>
           <div>apps</div>
         </div>
         <div>
-          <div className="profile-stat-num">3</div>
+          <div className="profile-stat-num">{stats.workspaceCount}</div>
           <div>workspaces</div>
         </div>
         <div>
-          <div className="profile-stat-num">∞</div>
-          <div>ideas</div>
+          <div className="profile-stat-num">{stats.openTodos}</div>
+          <div>open todos</div>
         </div>
-      </div>
-    </div>);
-
-}
-
-// ---------- App tile ----------
-function AppTile({ app }) {
-  const bg = `linear-gradient(140deg, ${app.color[0]} 0%, ${app.color[1]} 100%)`;
-  const handleClick = (e) => {
-    e.preventDefault();
-    window.dispatchEvent(new CustomEvent("lp:open-app", { detail: app }));
-  };
-  return (
-    <a className="app-tile" href={app.url} onClick={handleClick} title={app.desc}>
-      <div className="app-icon" style={{ background: bg }}>
-        <span style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }}>{app.glyph}</span>
-      </div>
-      <div className="app-label">{app.name}</div>
-      {app.tag && <div className="app-tag">{app.tag}</div>}
-    </a>);
-
-}
-
-// ---------- Apps card ----------
-function AppsCard() {
-  const [tab, setTab] = useState("all");
-  const apps = window.LP_DATA.apps;
-  const list = useMemo(() => {
-    if (tab === "all") return [...apps.personal, ...apps.offplate, ...apps.tools];
-    if (tab === "personal") return apps.personal;
-    if (tab === "offplate") return apps.offplate;
-    if (tab === "tools") return apps.tools;
-    return [];
-  }, [tab]);
-
-  return (
-    <div className="card apps">
-      <div className="card-header">
-        <div className="card-header-glyph" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}>
-          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" stroke="white" strokeWidth="1.8" /></svg>
-        </div>
-        <div className="card-title-block">
-          <div className="card-title">Apps</div>
-          <div className="card-sub">
-            <span>{list.length} shortcuts</span>
-            <span className="card-sub-dot" />
-            <span>tap to launch</span>
-          </div>
-        </div>
-        <div className="apps-tabs">
-          <button className={"apps-tab " + (tab === "all" ? "active" : "")} onClick={() => setTab("all")}>All</button>
-          <button className={"apps-tab " + (tab === "personal" ? "active" : "")} onClick={() => setTab("personal")}>Personal</button>
-          <button className={"apps-tab " + (tab === "offplate" ? "active" : "")} onClick={() => setTab("offplate")}>Off-Plate</button>
-          <button className={"apps-tab " + (tab === "tools" ? "active" : "")} onClick={() => setTab("tools")}>Tools</button>
-        </div>
-      </div>
-      <div className="app-grid">
-        {list.map((a) => <AppTile key={a.url} app={a} />)}
       </div>
     </div>);
 
@@ -626,21 +584,65 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-// ---------- Now card (time + weather + focus) ----------
+// ---------- Now card — DEPRECATED, replaced by TodayCard. Kept for old saved layouts. ----------
 function NowCard() {
   const [now, setNow] = useState(new Date());
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const slow = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => { clearInterval(id); clearInterval(slow); };
   }, []);
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
   const ss = String(now.getSeconds()).padStart(2, "0");
   const dateStr = now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
 
+  // Real weather from the cache the WeatherCard maintains
+  const wx = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("lp.weather.v1");
+      if (!raw) return null;
+      const { value } = JSON.parse(raw);
+      if (!value || !value.current || !value.daily) return null;
+      return {
+        temp: Math.round(value.current.temperature_2m),
+        code: value.current.weather_code,
+        hi: Math.round(value.daily.temperature_2m_max[0]),
+        lo: Math.round(value.daily.temperature_2m_min[0])
+      };
+    } catch (e) { return null; }
+  }, [tick]);
+
+  // Real focus: open todos + what Pomodoro is focused on + minutes today
+  const focus = useMemo(() => {
+    let openTodos = 0, doneTodos = 0;
+    try {
+      const raw = localStorage.getItem("launchpad.todos.v1");
+      if (raw) {
+        const todos = JSON.parse(raw) || [];
+        openTodos = todos.filter((t) => !t.done).length;
+        doneTodos = todos.filter((t) => t.done).length;
+      }
+    } catch (e) {}
+    let focusOn = null, minutesToday = 0;
+    try {
+      const raw = localStorage.getItem("launchpad.pomo.v1");
+      if (raw) {
+        const pomo = JSON.parse(raw) || {};
+        focusOn = pomo.focusOn || null;
+        const start = new Date(); start.setHours(0, 0, 0, 0);
+        minutesToday = Math.round((pomo.history || [])
+          .filter((h) => h.phase === "focus" && h.ts >= start.getTime())
+          .reduce((s, h) => s + h.duration, 0) / 60);
+      }
+    } catch (e) {}
+    return { openTodos, doneTodos, focusOn, minutesToday };
+  }, [tick]);
+
   return (
-    <div className="card" data-comment-anchor="5734045f40-div-330-5">
-      <div className="card-header" data-comment-anchor="801f37bfea-div-556-7">
+    <div className="card">
+      <div className="card-header">
         <div className="card-header-glyph" style={{ background: "linear-gradient(135deg, #38bdf8, #1e40af)" }}>
           <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.6" /><path d="M12 7v5l3 2" stroke="white" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </div>
@@ -665,22 +667,44 @@ function NowCard() {
         </div>
         <div className="now-item">
           <div className="now-label">Weather</div>
-          <div className="now-val">14°<span style={{ fontSize: 13, color: "var(--text-faint)" }}> · partly cloudy</span></div>
-          <div className="now-sub">H 17° · L 8°</div>
+          {wx ? (
+            <React.Fragment>
+              <div className="now-val">{wx.temp}°<span style={{ fontSize: 13, color: "var(--text-faint)" }}> · {nowWxLabel(wx.code)}</span></div>
+              <div className="now-sub">H {wx.hi}° · L {wx.lo}°</div>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <div className="now-val" style={{ fontSize: 16, fontWeight: 600 }}>—</div>
+              <div className="now-sub">Add Weather widget</div>
+            </React.Fragment>
+          )}
         </div>
         <div className="now-item">
           <div className="now-label">Focus</div>
-          <div className="now-val" style={{ fontSize: 16, fontFamily: "'Bricolage Grotesque'", fontWeight: 600 }}>Ship Launchpad v2</div>
-          <div className="now-sub">2 / 5 todos done</div>
+          <div className="now-val" style={{ fontSize: 16, fontFamily: "'Bricolage Grotesque'", fontWeight: 600 }}>
+            {focus.focusOn ? truncate(focus.focusOn, 22) : (focus.openTodos > 0 ? focus.openTodos + " open" : "All clear")}
+          </div>
+          <div className="now-sub">{focus.doneTodos} / {focus.doneTodos + focus.openTodos} todos done</div>
         </div>
         <div className="now-item">
-          <div className="now-label">Streak</div>
-          <div className="now-val">12<span style={{ fontSize: 13, color: "var(--text-faint)" }}>d</span></div>
-          <div className="now-sub">daily check-in</div>
+          <div className="now-label">Focused today</div>
+          <div className="now-val">{focus.minutesToday}<span style={{ fontSize: 13, color: "var(--text-faint)" }}>m</span></div>
+          <div className="now-sub">Pomodoro time</div>
         </div>
       </div>
     </div>);
 
+}
+
+function nowWxLabel(code) {
+  if (code === 0) return "Clear";
+  if (code >= 1 && code <= 3) return "Partly cloudy";
+  if (code >= 45 && code <= 48) return "Foggy";
+  if (code >= 51 && code <= 67) return "Rain";
+  if (code >= 71 && code <= 77) return "Snow";
+  if (code >= 80 && code <= 82) return "Showers";
+  if (code >= 95) return "Thunderstorm";
+  return "Cloudy";
 }
 
 function weekNum(d) {
@@ -692,5 +716,5 @@ function weekNum(d) {
 }
 
 Object.assign(window, {
-  ProfileCard, AppTile, AppsCard, CalendarCard, TodoCard, QuoteCard, NowCard, PomodoroCard
+  ProfileCard, CalendarCard, TodoCard, QuoteCard, NowCard, PomodoroCard
 });

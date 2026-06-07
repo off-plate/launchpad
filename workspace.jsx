@@ -36,7 +36,7 @@ function WorkspaceBar({ openApps, activeView, setActiveView, closeApp, closeAll,
         )}
       </button>
 
-      <div className="ws-tabs" data-comment-anchor="8ec9fcc60e-div-28-7">
+      <div className="ws-tabs">
         {openApps.map((app) => {
           const isActive = activeView === app.url;
           const isSplitPartner = splitMode && splitWith === app.url;

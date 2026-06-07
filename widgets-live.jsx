@@ -178,7 +178,7 @@ function GitHubCard() {
   );
 
   return (
-    <div className="card" data-comment-anchor="ea4a045a7a-div-181-5">
+    <div className="card">
       <div className="card-header">
         <div className="card-header-glyph" style={{ background: "linear-gradient(135deg, #6366f1, #1e1b4b)" }}>
           <svg viewBox="0 0 24 24" width="14" height="14" fill="white">

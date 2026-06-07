@@ -80,7 +80,7 @@ function TodayCard() {
             <path d="M5 9l7 4 7-4M5 9v8a1 1 0 001 1h12a1 1 0 001-1V9M5 9l-1-3h16l-1 3" stroke="white" strokeWidth="1.6" strokeLinejoin="round" />
           </svg>
         </div>
-        <div className="card-title-block" data-comment-anchor="5b7f1bd634-div-83-9">
+        <div className="card-title-block">
           <div className="card-title">Today</div>
           <div className="card-sub">
             <span>{greet}</span>
@@ -102,7 +102,7 @@ function TodayCard() {
               <circle cx="32" cy="32" r={R} fill="none" stroke={phaseColor} strokeWidth="4" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1)" }} />
             </g>
           </svg>
-          <span className="td-pomo-glyph" data-comment-anchor="ce153fc9bf-span-105-11" aria-hidden="true">
+          <span className="td-pomo-glyph" aria-hidden="true">
             {pomo && pomo.running ? (
               <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
                 <rect x="4" y="3" width="3" height="10" rx="0.8" />
