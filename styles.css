@@ -1463,3 +1463,26 @@ body[data-theme="forest"] {
 .cal-account-row { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); text-align: right; }
 a.cal-event { text-decoration: none; color: inherit; }
 a.cal-event:hover { background: rgba(255,255,255,0.04); border-radius: 8px; }
+
+/* Unified Focus card — tabs */
+.focus-card { display: flex; flex-direction: column; gap: 14px; }
+.focus-tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.05);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-left: auto;
+}
+.focus-tab {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  color: var(--text-dim);
+  transition: 120ms;
+  font-family: inherit;
+}
+.focus-tab:hover:not(.active) { color: var(--text); }
+.focus-tab.active { background: rgba(255,255,255,0.12); color: var(--text); }

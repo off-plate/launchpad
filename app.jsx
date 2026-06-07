@@ -33,12 +33,10 @@ const WIDGETS = {
   github:     { label: "GitHub activity", render: ()      => <GitHubCard />,        defaultW: 2, defaultH: 1 },
   hn:         { label: "Hacker News",     render: ()      => <HackerNewsCard />,    defaultW: 1, defaultH: 1 },
   dailyimg:   { label: "Daily image",     render: ()      => <LazyMount><DailyImageCard /></LazyMount>, defaultW: 1, defaultH: 1 },
-  focuschart: { label: "Focus chart",     render: ()      => <FocusChartCard />,    defaultW: 2, defaultH: 1 },
-  today:      { label: "Today",           render: ()      => <TodayCard />,         defaultW: 1, defaultH: 1 },
+  focus:      { label: "Focus",           render: ()      => <FocusCard />,         defaultW: 2, defaultH: 2 },
   habits:     { label: "Habits",          render: ()      => <HabitsCard />,        defaultW: 2, defaultH: 1 },
   notes:      { label: "Quick notes",     render: ()      => <QuickNotesCard />,    defaultW: 1, defaultH: 1 },
-  timeblocks: { label: "Time blocks",     render: ()      => <TimeBlocksCard />,    defaultW: 3, defaultH: 2 },
-  heatmap:    { label: "Focus heatmap",   render: ()      => <FocusHeatmapCard />,  defaultW: 3, defaultH: 1 }
+  timeblocks: { label: "Time blocks",     render: ()      => <TimeBlocksCard />,    defaultW: 3, defaultH: 2 }
 };
 
 // ---------- Default workspaces ----------
@@ -48,7 +46,7 @@ const DEFAULT_WORKSPACES = [
     name: "Personal",
     icon: "✦",
     layout: [
-      { id: "today",    w: 1, h: 1 },
+      { id: "focus",    w: 2, h: 2 },
       { id: "apps",     w: 2, h: 1 },
       { id: "calendar", w: 1, h: 1 },
       { id: "pomodoro", w: 1, h: 1 },
@@ -64,13 +62,12 @@ const DEFAULT_WORKSPACES = [
     name: "Work",
     icon: "◆",
     layout: [
-      { id: "today",      w: 1, h: 1 },
+      { id: "focus",      w: 2, h: 2 },
       { id: "weather",    w: 1, h: 1 },
       { id: "pomodoro",   w: 1, h: 1 },
       { id: "timeblocks", w: 3, h: 2 },
       { id: "apps",       w: 2, h: 1 },
       { id: "notes",      w: 1, h: 1 },
-      { id: "focuschart", w: 2, h: 1 },
       { id: "github",     w: 2, h: 1 },
       { id: "hn",         w: 1, h: 1 }
     ],
@@ -91,12 +88,11 @@ const DEFAULT_WORKSPACES = [
     name: "Side hustle",
     icon: "⤴",
     layout: [
-      { id: "today",      w: 1, h: 1 },
+      { id: "focus",      w: 2, h: 2 },
       { id: "apps",       w: 2, h: 1 },
       { id: "pomodoro",   w: 1, h: 1 },
       { id: "timeblocks", w: 2, h: 2 },
       { id: "github",     w: 2, h: 1 },
-      { id: "focuschart", w: 2, h: 1 }
     ],
     appSelection: {
       mode: "custom",
@@ -115,14 +111,12 @@ const DEFAULT_WORKSPACES = [
     name: "Personal development",
     icon: "✺",
     layout: [
-      { id: "today",      w: 1, h: 1 },
+      { id: "focus",      w: 2, h: 2 },
       { id: "quote",      w: 1, h: 1 },
       { id: "pomodoro",   w: 1, h: 1 },
       { id: "apps",       w: 2, h: 1 },
       { id: "habits",     w: 2, h: 1 },
       { id: "notes",      w: 1, h: 1 },
-      { id: "heatmap",    w: 3, h: 1 },
-      { id: "focuschart", w: 2, h: 1 },
       { id: "dailyimg",   w: 1, h: 1 }
     ],
     appSelection: {
@@ -149,14 +143,29 @@ function loadWorkspaces() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        loaded = parsed.map((w) => ({
-          ...w,
-          icon: w.icon || "✦",
-          appSelection: w.appSelection || { mode: "all", apps: [] },
-          layout: (w.layout || [])
-            .filter((i) => WIDGETS[i.id] && [1, 2, 3].includes(i.w))
-            .map((i) => ({ ...i, h: [1, 2, 3].includes(i.h) ? i.h : 1 }))
-        }));
+        loaded = parsed.map((w) => {
+          // Migrate today/focuschart/heatmap → unified focus widget
+          const migratedLayout = [];
+          const seenFocus = new Set();
+          (w.layout || []).forEach((i) => {
+            const id = (i.id === "today" || i.id === "focuschart" || i.id === "heatmap") ? "focus" : i.id;
+            if (id === "focus") {
+              if (seenFocus.has(id)) return; // dedupe
+              seenFocus.add(id);
+              migratedLayout.push({ id, w: 2, h: 2 });
+              return;
+            }
+            migratedLayout.push({ ...i, id });
+          });
+          return {
+            ...w,
+            icon: w.icon || "✦",
+            appSelection: w.appSelection || { mode: "all", apps: [] },
+            layout: migratedLayout
+              .filter((i) => WIDGETS[i.id] && [1, 2, 3].includes(i.w))
+              .map((i) => ({ ...i, h: [1, 2, 3].includes(i.h) ? i.h : 1 }))
+          };
+        });
       }
     }
     // Migrate from earlier v1 pages key if present
@@ -364,7 +373,7 @@ function LaunchpadApp() {
   // Workspaces CRUD
   const addWorkspace = () => {
     const id = "ws-" + Date.now();
-    setWorkspaces((ps) => [...ps, { id, name: "New workspace", icon: "✦", layout: [{ id: "today", w: 1, h: 1 }], appSelection: { mode: "all", apps: [] } }]);
+    setWorkspaces((ps) => [...ps, { id, name: "New workspace", icon: "✦", layout: [{ id: "focus", w: 2, h: 2 }], appSelection: { mode: "all", apps: [] } }]);
     setActiveWorkspaceId(id);
     setEditMode(true);
   };
@@ -833,7 +842,8 @@ function galleryGlyph(id) {
   const map = {
     profile: "👤", apps: "▦", calendar: "📅", todo: "✓", pomodoro: "⏱",
     quote: "❝", recents: "↻", weather: "☁",
-    github: "</>", hn: "Y", dailyimg: "🖼", focuschart: "📊"
+    github: "</>", hn: "Y", dailyimg: "🖼", focus: "◎",
+    habits: "✓", notes: "✎", timeblocks: "▭"
   };
   return map[id] || "✦";
 }

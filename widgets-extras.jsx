@@ -734,6 +734,275 @@ function formatHour(h) {
   return String(whole).padStart(2, "0") + ":" + String(min).padStart(2, "0");
 }
 
+// ============================================================
+// FocusCard — unified Today + 14-day chart + year heatmap with tabs
+// Replaces three separate widgets that all showed focus minutes in
+// different time grains. Defaults to "Today" tab.
+// ============================================================
+function FocusCard() {
+  const [tab, setTab] = useStateWX(() => {
+    try { return localStorage.getItem("launchpad.focus.tab") || "today"; } catch (e) { return "today"; }
+  });
+  useEffectWX(() => { try { localStorage.setItem("launchpad.focus.tab", tab); } catch (e) {} }, [tab]);
+
+  const [tick, setTick] = useStateWX(0);
+  const [now, setNow] = useStateWX(new Date());
+  useEffectWX(() => {
+    const id = setInterval(() => { setTick((n) => n + 1); setNow(new Date()); }, 1000);
+    const onChange = () => setTick((n) => n + 1);
+    window.addEventListener("lp:todos-changed", onChange);
+    window.addEventListener("lp:pomo-sync", onChange);
+    return () => { clearInterval(id); window.removeEventListener("lp:todos-changed", onChange); window.removeEventListener("lp:pomo-sync", onChange); };
+  }, []);
+
+  const pomo = useMemoWX(() => readPomoState(), [tick]);
+  const minutesToday = useMemoWX(() => {
+    if (!pomo || !pomo.history) return 0;
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    return Math.round(pomo.history.filter((h) => h.phase === "focus" && h.ts >= start.getTime()).reduce((s, h) => s + h.duration, 0) / 60);
+  }, [pomo]);
+
+  return (
+    <div className="card focus-card">
+      <div className="card-header">
+        <div className="card-header-glyph" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="1.6" />
+            <circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.6" />
+            <circle cx="12" cy="12" r="1" fill="white" />
+          </svg>
+        </div>
+        <div className="card-title-block">
+          <div className="card-title">Focus</div>
+          <div className="card-sub">
+            <span>{minutesToday} min today</span>
+            <span className="card-sub-dot" />
+            <span>{now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" })}</span>
+          </div>
+        </div>
+        <div className="focus-tabs">
+          <button className={"focus-tab " + (tab === "today" ? "active" : "")} onClick={() => setTab("today")}>Today</button>
+          <button className={"focus-tab " + (tab === "14d" ? "active" : "")} onClick={() => setTab("14d")}>14d</button>
+          <button className={"focus-tab " + (tab === "year" ? "active" : "")} onClick={() => setTab("year")}>Year</button>
+        </div>
+      </div>
+
+      {tab === "today" && <FocusTodayBody pomo={pomo} minutesToday={minutesToday} tick={tick} />}
+      {tab === "14d" && <Focus14dBody tick={tick} />}
+      {tab === "year" && <FocusYearBody tick={tick} />}
+    </div>
+  );
+}
+
+function FocusTodayBody({ pomo, minutesToday, tick }) {
+  const todos = useMemoWX(() => readTodos(), [tick]);
+  const openTodos = todos.filter((i) => !i.done).slice(0, 4);
+  const doneCount = todos.filter((i) => i.done).length;
+  const events = (window.LP_DATA && window.LP_DATA.events && window.LP_DATA.events.today) || [];
+
+  const total = pomo && pomo.durations ? pomo.durations[pomo.phase] : 25 * 60;
+  const pct = pomo ? (total - pomo.remaining) / total : 0;
+  const R = 26;
+  const C = 2 * Math.PI * R;
+  const offset = C * (1 - pct);
+  const mm = pomo ? String(Math.floor(pomo.remaining / 60)).padStart(2, "0") : "25";
+  const ss = pomo ? String(pomo.remaining % 60).padStart(2, "0") : "00";
+  const phaseColor = !pomo || pomo.phase === "focus" ? "var(--accent)" : pomo.phase === "short" ? "var(--accent-3)" : "var(--accent-2)";
+
+  const toggleTodo = (id) => {
+    const next = todos.map((i) => i.id === id ? { ...i, done: !i.done } : i);
+    try { localStorage.setItem("launchpad.todos.v1", JSON.stringify(next)); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("lp:todos-changed"));
+  };
+
+  return (
+    <React.Fragment>
+      <div className="td-row td-focus-row">
+        <button
+          className="td-pomo"
+          onClick={() => window.dispatchEvent(new CustomEvent("lp:pomo-toggle"))}
+          title={pomo && pomo.running ? "Pause Pomodoro" : "Start Pomodoro"}
+        >
+          <svg viewBox="0 0 64 64" width="56" height="56">
+            <circle cx="32" cy="32" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+            <g transform="rotate(-90 32 32)">
+              <circle cx="32" cy="32" r={R} fill="none" stroke={phaseColor} strokeWidth="4" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} style={{ transition: "stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1)" }} />
+            </g>
+          </svg>
+          <span className="td-pomo-glyph" aria-hidden="true">
+            {pomo && pomo.running ? (
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="4" y="3" width="3" height="10" rx="0.8" /><rect x="9" y="3" width="3" height="10" rx="0.8" /></svg>
+            ) : (
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M5 3.2l8 4.8-8 4.8V3.2z" /></svg>
+            )}
+          </span>
+        </button>
+        <div className="td-focus-meta">
+          <div className="td-focus-clock">{mm}:{ss}</div>
+          <div className="td-focus-sub">
+            {pomo ? pomo.phase === "focus" ? "Focus" : pomo.phase === "short" ? "Short break" : "Long break" : "Focus"}
+            {" · "}{minutesToday} min today
+          </div>
+          {pomo && pomo.focusOn && <div className="td-focus-on">→ {pomo.focusOn}</div>}
+        </div>
+      </div>
+
+      <div className="td-section">
+        <div className="td-section-head">
+          <span className="td-section-label">Up next</span>
+          <span className="td-section-meta">{openTodos.length} open · {doneCount} done</span>
+        </div>
+        {openTodos.length === 0 ? (
+          <div className="td-empty">All clear — add something in the To-do widget.</div>
+        ) : (
+          <div className="td-todo-list">
+            {openTodos.map((t) => (
+              <div key={t.id} className="td-todo">
+                <button className="todo-check" onClick={() => toggleTodo(t.id)} />
+                <div className="td-todo-text">{t.text}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {events.length > 0 && (
+        <div className="td-section">
+          <div className="td-section-head">
+            <span className="td-section-label">Today's events</span>
+            <span className="td-section-meta">{events.length}</span>
+          </div>
+          <div className="td-events">
+            {events.map((e, i) => (
+              <div key={i} className="td-event">
+                <div className={"cal-event-bar v" + (e.v || 1)} />
+                <div className="td-event-time">{e.time}</div>
+                <div className="td-event-title">{e.title}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+
+function Focus14dBody({ tick }) {
+  const days = useMemoWX(() => {
+    let pomo = null;
+    try { pomo = JSON.parse(localStorage.getItem("launchpad.pomo.v1")); } catch (e) {}
+    const history = (pomo && pomo.history) || [];
+    const out = [];
+    const now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const start = d.getTime();
+      const end = start + 24 * 60 * 60 * 1000;
+      const focusSeconds = history.filter((h) => h.phase === "focus" && h.ts >= start && h.ts < end).reduce((s, h) => s + h.duration, 0);
+      out.push({ date: d, minutes: Math.round(focusSeconds / 60), label: d.toLocaleDateString(undefined, { weekday: "short" })[0] });
+    }
+    return out;
+  }, [tick]);
+
+  const max = Math.max(25, ...days.map((d) => d.minutes));
+  const total = days.reduce((s, d) => s + d.minutes, 0);
+
+  return (
+    <React.Fragment>
+      <div className="fc-bars">
+        {days.map((d, i) => {
+          const h = d.minutes / max;
+          const isToday = i === days.length - 1;
+          return (
+            <div className="fc-col" key={i} title={d.date.toLocaleDateString() + " — " + d.minutes + " min focused"}>
+              <div className="fc-bar-wrap">
+                <div className={"fc-bar " + (isToday ? "today" : "")} style={{ height: Math.max(2, h * 100) + "%" }} />
+              </div>
+              <div className={"fc-day " + (isToday ? "today" : "")}>{d.label}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="fc-footer">
+        <div>Total: {total} min</div>
+        <div>Best: {Math.max(...days.map((d) => d.minutes))} min</div>
+        <div>Avg: {Math.round(total / 14)} min/day</div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function FocusYearBody({ tick }) {
+  const cells = useMemoWX(() => {
+    const pomo = readPomoState();
+    const hist = (pomo && pomo.history) || [];
+    const minutesPerDay = {};
+    hist.forEach((h) => {
+      if (h.phase !== "focus") return;
+      const d = new Date(h.ts); d.setHours(0, 0, 0, 0);
+      const key = isoDate(d);
+      minutesPerDay[key] = (minutesPerDay[key] || 0) + h.duration / 60;
+    });
+    const cells = [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dayOfWeek = (today.getDay() + 6) % 7;
+    const start = new Date(today);
+    start.setDate(start.getDate() - dayOfWeek - 52 * 7);
+    const max = Math.max(60, ...Object.values(minutesPerDay));
+    for (let i = 0; i < 53 * 7; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i);
+      const key = isoDate(d);
+      const min = minutesPerDay[key] || 0;
+      let level = 0;
+      if (min > 0) level = Math.min(4, Math.ceil(min / max * 4));
+      cells.push({ date: d, key, minutes: Math.round(min), level, future: d > today });
+    }
+    return { cells, max };
+  }, [tick]);
+
+  const totalMin = cells.cells.reduce((s, c) => s + c.minutes, 0);
+  const totalHours = Math.round(totalMin / 60);
+  const activeDays = cells.cells.filter((c) => c.minutes > 0).length;
+
+  const monthLabels = useMemoWX(() => {
+    const out = []; let lastMonth = -1;
+    cells.cells.forEach((c, i) => {
+      if (i % 7 === 0) {
+        const m = c.date.getMonth();
+        if (m !== lastMonth) { out.push({ col: i / 7, label: c.date.toLocaleDateString(undefined, { month: "short" }) }); lastMonth = m; }
+      }
+    });
+    return out;
+  }, [cells]);
+
+  return (
+    <React.Fragment>
+      <div className="fh-frame">
+        <div className="fh-months">
+          {monthLabels.map((m) => <span key={m.col + "-" + m.label} style={{ gridColumn: m.col + 1 }}>{m.label}</span>)}
+        </div>
+        <div className="fh-grid">
+          {cells.cells.map((c) => (
+            <div key={c.key} className={"fh-cell fh-lvl-" + c.level + (c.future ? " future" : "")}
+                 title={c.future ? c.date.toLocaleDateString() : `${c.date.toLocaleDateString()} · ${c.minutes} min`} />
+          ))}
+        </div>
+      </div>
+      <div className="fh-legend">
+        <span>{totalHours} h · {activeDays} active days</span>
+        <div style={{ flex: 1 }} />
+        <span>Less</span>
+        <div className="fh-cell fh-lvl-0" />
+        <div className="fh-cell fh-lvl-1" />
+        <div className="fh-cell fh-lvl-2" />
+        <div className="fh-cell fh-lvl-3" />
+        <div className="fh-cell fh-lvl-4" />
+        <span>More</span>
+      </div>
+    </React.Fragment>
+  );
+}
+
 Object.assign(window, {
-  TodayCard, HabitsCard, QuickNotesCard, TimeBlocksCard, FocusHeatmapCard
+  TodayCard, HabitsCard, QuickNotesCard, TimeBlocksCard, FocusHeatmapCard, FocusCard
 });
