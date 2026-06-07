@@ -15,7 +15,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "pomoLongMin": 15,
   "wallpaperUrl": "",
   "wallpaperBlur": 12,
-  "wallpaperOverlay": 60
+  "wallpaperOverlay": 60,
+  "googleClientId": ""
 }/*EDITMODE-END*/;
 
 // ---------- Widget registry ----------
@@ -312,6 +313,12 @@ function LaunchpadApp() {
     document.body.setAttribute("data-density", t.density);
   }, [t.theme, t.density]);
 
+  // Propagate Google Calendar Client ID to body attribute (read by CalendarCard)
+  useEffectApp(() => {
+    if (t.googleClientId) document.body.setAttribute("data-google-client-id", t.googleClientId);
+    else document.body.removeAttribute("data-google-client-id");
+  }, [t.googleClientId]);
+
   useEffectApp(() => { saveWorkspaces(workspaces); }, [workspaces]);
   useEffectApp(() => { try { localStorage.setItem(ACTIVE_WORKSPACE_KEY, activeWorkspaceId); } catch (e) {} }, [activeWorkspaceId]);
 
@@ -552,6 +559,13 @@ function LaunchpadApp() {
               <TweakSlider label="Overlay darkness" min={0} max={100} step={1} value={t.wallpaperOverlay} onChange={(v) => setTweak("wallpaperOverlay", v)} />
             </React.Fragment>
           )}
+        </TweakSection>
+
+        <TweakSection label="Google Calendar">
+          <TweakText label="OAuth Client ID" value={t.googleClientId} onChange={(v) => setTweak("googleClientId", v)} />
+          <div style={{ fontSize: 11, color: "var(--text-faint)", padding: "4px 10px 8px", lineHeight: 1.4 }}>
+            Create a Web OAuth client in Google Cloud Console (APIs &amp; Services → Credentials), add this site's origin to authorised JavaScript origins, paste the Client ID here. Scope is read-only.
+          </div>
         </TweakSection>
 
         <TweakSection label="Pomodoro durations">

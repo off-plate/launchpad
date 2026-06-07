@@ -46,18 +46,34 @@ function ProfileCard({ name = "Michael", handle = "michael@launchpad.dev" }) {
 
 }
 
-// ---------- Calendar card ----------
+// ---------- Calendar card (Google Calendar via OAuth) ----------
 function CalendarCard() {
   const today = new Date();
   const [view, setView] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const isCurrentMonth = view.y === today.getFullYear() && view.m === today.getMonth();
-  const eventDays = isCurrentMonth ? window.LP_DATA.events.eventDays : [];
+
+  // Client ID is set in Tweaks → stored on body[data-google-client-id]
+  const clientId = (typeof document !== "undefined" && document.body.getAttribute("data-google-client-id")) || "";
+  const gcal = window.useGoogleCalendar
+    ? window.useGoogleCalendar(clientId, view.y, view.m)
+    : { events: [], status: "no-client", signIn: () => {}, signOut: () => {}, refresh: () => {}, hasToken: false };
+
+  const eventDays = useMemo(() => {
+    const days = new Set();
+    gcal.events.forEach((e) => { if (e.day != null) days.add(e.day); });
+    return days;
+  }, [gcal.events]);
+
+  const todayDate = today.getDate();
+  const todayEvents = useMemo(() => {
+    if (!isCurrentMonth) return [];
+    return gcal.events.filter((e) => e.day === todayDate).slice(0, 8);
+  }, [gcal.events, isCurrentMonth, todayDate]);
 
   const monthName = new Date(view.y, view.m, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  const firstDay = new Date(view.y, view.m, 1).getDay(); // 0=Sun
+  const firstDay = new Date(view.y, view.m, 1).getDay();
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
   const prevMonthDays = new Date(view.y, view.m, 0).getDate();
-  // Start grid on Monday: shift so Mon=0
   const lead = (firstDay + 6) % 7;
 
   const cells = [];
@@ -66,7 +82,12 @@ function CalendarCard() {
   while (cells.length % 7 !== 0) cells.push({ d: cells.length - lead - daysInMonth + 1, muted: true });
   while (cells.length < 42) cells.push({ d: cells.length - lead - daysInMonth + 1, muted: true });
 
-  const todayEvents = isCurrentMonth ? window.LP_DATA.events.today : [];
+  const subStatus = gcal.status === "ok"
+    ? todayEvents.length + " events today"
+    : gcal.status === "loading" ? "Loading…"
+    : gcal.status === "needs-auth" ? "Sign in to load events"
+    : gcal.status === "no-client" ? "Set Client ID in Tweaks"
+    : gcal.status === "error" ? "Couldn't load" : "Idle";
 
   return (
     <div className="card">
@@ -77,12 +98,14 @@ function CalendarCard() {
         <div className="card-title-block">
           <div className="card-title">Calendar</div>
           <div className="card-sub">
-            <span>All Calendars</span>
+            <span>Google · primary</span>
             <span className="card-sub-dot" />
-            <span>{todayEvents.length} events today</span>
+            <span>{subStatus}</span>
           </div>
         </div>
-        <button className="card-action" title="Add event">＋</button>
+        {gcal.hasToken && (
+          <button className="card-action" onClick={gcal.refresh} title="Refresh">↻</button>
+        )}
       </div>
 
       <div className="cal-month-row">
@@ -100,7 +123,7 @@ function CalendarCard() {
       <div className="cal-grid">
         {cells.map((c, i) => {
           const isToday = !c.muted && isCurrentMonth && c.d === today.getDate();
-          const hasEvent = !c.muted && eventDays.includes(c.d);
+          const hasEvent = !c.muted && eventDays.has(c.d);
           const cls = ["cal-day"];
           if (c.muted) cls.push("muted");
           if (isToday) cls.push("today");
@@ -110,18 +133,40 @@ function CalendarCard() {
       </div>
 
       <div className="cal-events">
-        {todayEvents.length > 0 ? todayEvents.map((e, i) =>
-        <div className="cal-event" key={i}>
-            <div className={"cal-event-bar v" + e.v} />
-            <div className="cal-event-time">{e.time}</div>
-            <div className="cal-event-title">{e.title}</div>
+        {gcal.status === "no-client" && (
+          <div className="cal-empty">Open Tweaks → Google Calendar to paste your OAuth Client ID.</div>
+        )}
+        {gcal.status === "needs-auth" && (
+          <div className="cal-events-cta">
+            <button className="cal-signin-btn" onClick={gcal.signIn}>Sign in with Google</button>
+            <div className="cal-signin-sub">Read-only access to your primary calendar.</div>
           </div>
-        ) :
-        <div className="cal-empty">No events today</div>
-        }
+        )}
+        {gcal.status === "error" && (
+          <div className="cal-empty">Couldn't load events. <button className="cal-link-btn" onClick={gcal.refresh}>Retry</button></div>
+        )}
+        {gcal.status === "ok" && (
+          todayEvents.length > 0 ? todayEvents.map((e) => (
+            <a className="cal-event" key={e.id} href={e.htmlLink || "#"} target="_blank" rel="noopener noreferrer">
+              <div className={"cal-event-bar v" + ((Math.abs(hashStr(e.id)) % 3) + 1)} />
+              <div className="cal-event-time">{e.allDay ? "all day" : e.time}</div>
+              <div className="cal-event-title">{e.title}</div>
+            </a>
+          )) : <div className="cal-empty">No events today</div>
+        )}
+        {gcal.hasToken && (
+          <div className="cal-account-row">
+            <button className="cal-link-btn" onClick={gcal.signOut}>Sign out</button>
+          </div>
+        )}
       </div>
     </div>);
 
+}
+
+function hashStr(s) {
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
 }
 
 // ---------- Todo card ----------

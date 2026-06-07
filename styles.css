@@ -1447,3 +1447,19 @@ body[data-theme="forest"] {
   .pomo-presets { flex-wrap: wrap; }
   .pomo-preset { flex: 1 1 calc(33% - 4px); }
 }
+
+/* Google Calendar wiring */
+.cal-events-cta { padding: 14px 4px 6px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.cal-signin-btn {
+  padding: 8px 16px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #1a0e08; font-weight: 600; font-size: 12.5px;
+  box-shadow: 0 8px 20px -10px var(--accent);
+}
+.cal-signin-btn:hover { filter: brightness(1.08); }
+.cal-signin-sub { font-size: 11px; color: var(--text-faint); }
+.cal-link-btn { font-size: 11.5px; color: var(--text-dim); text-decoration: underline; padding: 4px 6px; border-radius: 5px; }
+.cal-link-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+.cal-account-row { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); text-align: right; }
+a.cal-event { text-decoration: none; color: inherit; }
+a.cal-event:hover { background: rgba(255,255,255,0.04); border-radius: 8px; }
