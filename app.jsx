@@ -2,7 +2,7 @@
 // Features: multi-page dashboards, widget gallery, drag-and-resize bento grid,
 // app workspace iframes (with split view), wallpaper picker, custom Pomodoro durations.
 
-const { useState: useStateApp, useEffect: useEffectApp, useRef: useRefApp, useMemo: useMemoApp } = React;
+const { useState: useStateApp, useEffect: useEffectApp, useRef: useRefApp } = React;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "theme": "midnight",
@@ -237,7 +237,6 @@ function LaunchpadApp() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useStateApp(() => loadActiveWorkspaceId(loadWorkspaces()));
   const [editMode, setEditMode] = useStateApp(false);
   const [galleryOpen, setGalleryOpen] = useStateApp(false);
-  const [launcherOpen, setLauncherOpen] = useStateApp(false);
 
   // Workspace iframe state (the "app workspace" — the open-apps view)
   const [openApps, setOpenApps] = useStateApp([]);
@@ -291,29 +290,11 @@ function LaunchpadApp() {
         setTimeout(() => cell.classList.remove("pomo-focused"), 1500);
       }, 120);
     };
-    const onKey = (e) => {
-      const isMod = e.metaKey || e.ctrlKey;
-      if (isMod && (e.key === "k" || e.key === "K")) {
-        e.preventDefault();
-        setLauncherOpen((v) => !v);
-        return;
-      }
-      if (isMod && e.key >= "1" && e.key <= "9") {
-        const idx = parseInt(e.key, 10) - 1;
-        if (workspaces[idx]) {
-          e.preventDefault();
-          setActiveWorkspaceId(workspaces[idx].id);
-          setActiveView("dashboard");
-        }
-      }
-    };
     window.addEventListener("lp:open-app", onOpen);
     window.addEventListener("lp:focus-pomo", onFocusPomo);
-    window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("lp:open-app", onOpen);
       window.removeEventListener("lp:focus-pomo", onFocusPomo);
-      window.removeEventListener("keydown", onKey);
     };
   }, [workspaces]);
 
@@ -509,7 +490,6 @@ function LaunchpadApp() {
           setEditMode={setEditMode}
           resetLayout={resetCurrentWorkspace}
           openGallery={() => setGalleryOpen(true)}
-          openLauncher={() => setLauncherOpen(true)}
         />
       )}
 
@@ -520,15 +500,6 @@ function LaunchpadApp() {
           addWidget={(id) => { addWidget(id); }}
           removeWidget={removeWidget}
           onClose={() => setGalleryOpen(false)}
-        />
-      )}
-
-      {launcherOpen && (
-        <Launcher
-          workspaces={workspaces}
-          activeWorkspaceId={activeWorkspaceId}
-          setActiveWorkspaceId={(id) => { setActiveWorkspaceId(id); setActiveView("dashboard"); }}
-          onClose={() => setLauncherOpen(false)}
         />
       )}
 
@@ -622,11 +593,10 @@ function WorkspaceTabs({ workspaces, activeWorkspaceId, setActiveWorkspaceId, ed
                   className="ws-tab-pill"
                   onClick={() => setActiveWorkspaceId(p.id)}
                   onDoubleClick={() => editMode && setEditingId(p.id)}
-                  title={"Switch to " + p.name + " · ⌘" + (idx + 1)}
+                  title={"Switch to " + p.name}
                 >
                   <span className="ws-tab-pill-icon">{p.icon || "✦"}</span>
                   <span className="ws-tab-pill-name">{p.name}</span>
-                  {!editMode && <span className="ws-tab-pill-kbd">⌘{idx + 1}</span>}
                 </button>
               )}
               {editMode && (
@@ -851,7 +821,7 @@ function galleryGlyph(id) {
 // =============================================================
 // Customize dock — minimal pill that opens the unified Tweaks panel
 // =============================================================
-function EditBar({ editMode, setEditMode, resetLayout, openGallery, openLauncher }) {
+function EditBar({ editMode, setEditMode, resetLayout, openGallery }) {
   const openTweaks = () => {
     window.parent.postMessage({ type: "__activate_edit_mode" }, "*");
     window.dispatchEvent(new MessageEvent("message", { data: { type: "__activate_edit_mode" } }));
@@ -868,147 +838,22 @@ function EditBar({ editMode, setEditMode, resetLayout, openGallery, openLauncher
           <button className="customize-pill primary" onClick={() => setEditMode(false)}>Done</button>
         </div>
       ) : (
-        <React.Fragment>
-          <button className="customize-pill subtle" onClick={openLauncher} title="Open command launcher (⌘K)">
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, opacity: 0.7 }}>⌘K</span>
-          </button>
-          <button
-            className="customize-pill"
-            onClick={openTweaks}
-            title="Customize — theme, layout, Pomodoro, identity"
-          >
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
-              <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-            <span>Customize</span>
-          </button>
-        </React.Fragment>
+        <button
+          className="customize-pill"
+          onClick={openTweaks}
+          title="Customize — theme, layout, Pomodoro, identity"
+        >
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+          <span>Customize</span>
+        </button>
       )}
     </div>
   );
 }
 
-// =============================================================
-// Command launcher (⌘K)
-// =============================================================
-function Launcher({ workspaces, activeWorkspaceId, setActiveWorkspaceId, onClose }) {
-  const [q, setQ] = useStateApp("");
-  const [idx, setIdx] = useStateApp(0);
-
-  const apps = useMemoApp(() => {
-    const d = window.LP_DATA && window.LP_DATA.apps;
-    if (!d) return [];
-    return [...d.personal, ...d.offplate, ...d.tools];
-  }, []);
-
-  const results = useMemoApp(() => {
-    const term = q.trim().toLowerCase();
-    const items = [];
-
-    // Apps
-    apps.forEach((a) => {
-      const hay = (a.name + " " + (a.desc || "") + " " + (a.tag || "")).toLowerCase();
-      if (!term || hay.includes(term)) {
-        items.push({
-          kind: "app",
-          key: "app:" + a.url,
-          name: a.name,
-          sub: a.desc || "App shortcut",
-          glyph: a.glyph,
-          color: a.color,
-          action: () => {
-            window.LP_recordOpen && window.LP_recordOpen(a.url);
-            window.dispatchEvent(new CustomEvent("lp:open-app", { detail: a }));
-            onClose();
-          }
-        });
-      }
-    });
-
-    // Workspaces
-    workspaces.forEach((w, i) => {
-      const hay = (w.name + " workspace").toLowerCase();
-      if (!term || hay.includes(term)) {
-        items.push({
-          kind: "ws",
-          key: "ws:" + w.id,
-          name: "Switch to: " + w.name,
-          sub: "Workspace · ⌘" + (i + 1),
-          glyph: w.icon || "✦",
-          color: ["#a78bfa", "#4c1d95"],
-          action: () => { setActiveWorkspaceId(w.id); onClose(); }
-        });
-      }
-    });
-
-    // Commands
-    const cmds = [
-      { name: "Open Tweaks panel",         sub: "Theme, wallpaper, Pomodoro",    glyph: "✦", action: () => {
-        window.parent.postMessage({ type: "__activate_edit_mode" }, "*");
-        window.dispatchEvent(new MessageEvent("message", { data: { type: "__activate_edit_mode" } }));
-        onClose();
-      } },
-      { name: "Start / pause Pomodoro",    sub: "Toggle the current focus timer", glyph: "⏱", action: () => { window.dispatchEvent(new CustomEvent("lp:pomo-toggle")); onClose(); } },
-      { name: "Jump to Pomodoro",          sub: "Scroll to & highlight",          glyph: "→",  action: () => { window.dispatchEvent(new CustomEvent("lp:focus-pomo")); onClose(); } }
-    ];
-    cmds.forEach((c) => {
-      const hay = (c.name + " " + c.sub).toLowerCase();
-      if (!term || hay.includes(term)) {
-        items.push({ kind: "cmd", key: "cmd:" + c.name, ...c, color: ["#34d399", "#065f46"] });
-      }
-    });
-
-    return items.slice(0, 30);
-  }, [q, apps, workspaces]);
-
-  useEffectApp(() => { setIdx(0); }, [q]);
-
-  const onKey = (e) => {
-    if (e.key === "Escape") { onClose(); return; }
-    if (e.key === "ArrowDown") { e.preventDefault(); setIdx((i) => Math.min(results.length - 1, i + 1)); return; }
-    if (e.key === "ArrowUp")   { e.preventDefault(); setIdx((i) => Math.max(0, i - 1)); return; }
-    if (e.key === "Enter")     { e.preventDefault(); results[idx] && results[idx].action(); }
-  };
-
-  return (
-    <div className="launcher-backdrop" onClick={onClose}>
-      <div className="launcher" onClick={(e) => e.stopPropagation()} onKeyDown={onKey}>
-        <div className="launcher-input-wrap">
-          <span className="launcher-icon">⌘K</span>
-          <input
-            className="launcher-input"
-            placeholder="Search apps, workspaces, commands…"
-            value={q}
-            autoFocus
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <span className="launcher-hint">↑↓ to navigate · ↵ to open</span>
-        </div>
-        <div className="launcher-results">
-          {results.length === 0 && <div className="launcher-empty">No matches</div>}
-          {results.map((r, i) => (
-            <button
-              key={r.key}
-              className={"launcher-row " + (i === idx ? "active" : "")}
-              onMouseEnter={() => setIdx(i)}
-              onClick={r.action}
-            >
-              <div className="launcher-row-glyph" style={{ background: `linear-gradient(140deg, ${r.color[0]}, ${r.color[1]})` }}>
-                {r.glyph}
-              </div>
-              <div className="launcher-row-text">
-                <div className="launcher-row-name">{r.name}</div>
-                <div className="launcher-row-sub">{r.sub}</div>
-              </div>
-              <div className="launcher-row-kind">{r.kind}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // =============================================================
 // Error boundary — contains widget crashes
