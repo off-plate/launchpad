@@ -438,11 +438,21 @@ body.lp-pointer-dragging * { cursor: grabbing !important; }
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: var(--text-faint);
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   padding: 0 2px;
+  min-width: 0;
 }
 .tb-hour-label {
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  min-width: 0;
+}
+/* Hide every other hour label when card is narrow to avoid overlap */
+@media (max-width: 1100px) {
+  .lp-cell.w-1 .tb-hour-label:nth-child(odd),
+  .lp-cell.w-2 .tb-hour-label:nth-child(odd) { visibility: hidden; }
 }
 .tb-track {
   position: relative;
@@ -487,8 +497,9 @@ body.lp-pointer-dragging * { cursor: grabbing !important; }
   border-radius: 10px;
   cursor: grab;
   user-select: none;
-  box-shadow: 0 6px 18px -6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);
-  color: #1a0e08;
+  box-shadow: 0 6px 18px -6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.22);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
   transition: top 80ms, height 80ms, opacity 100ms;
   overflow: hidden;
   display: flex;
@@ -520,7 +531,7 @@ body.lp-pointer-dragging * { cursor: grabbing !important; }
   background: transparent;
   border: 0;
   outline: 0;
-  color: #1a0e08;
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
@@ -531,17 +542,19 @@ body.lp-pointer-dragging * { cursor: grabbing !important; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tb-block-title { color: #fff; background: rgba(0,0,0,0.18); border-radius: 4px; padding: 2px 4px; }
+.tb-block-title::placeholder { color: rgba(255,255,255,0.7); }
 .tb-block-title { cursor: text; }
 .tb-block-title-static { cursor: text; }
-.tb-block-empty { opacity: 0.55; font-style: italic; font-weight: 500; }
+.tb-block-empty { opacity: 0.75; font-style: italic; font-weight: 500; }
 .tb-block-del {
   position: absolute;
   top: 6px;
   right: 6px;
   width: 22px; height: 22px;
   border-radius: 6px;
-  background: rgba(0,0,0,0.25);
-  color: #1a0e08;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
   display: grid;
   place-items: center;
   opacity: 0;
