@@ -13,7 +13,8 @@ window.LP_DATA = {
       { name: "Marketeer",     glyph: "🧠", tag: "AI",     color: ["#f472b6","#831843"], url: "https://marketeers.netlify.app/",              desc: "Senior marketing consult" },
       { name: "Postěžuj si",   glyph: "💬", tag: "Web",    color: ["#fb923c","#7c2d12"], url: "https://postezuj-si.netlify.app/",             desc: "Vent anonymously" },
       { name: "Akcie vs byty", glyph: "📈", tag: "GH",     color: ["#22d3ee","#155e75"], url: "https://off-plate.github.io/30years/",         desc: "Stocks vs apartments" },
-      { name: "Challenger 392",glyph: "🏎",  tag: "App",    color: ["#facc15","#78350f"], url: "https://challenger-392-service.netlify.app/",  desc: "Challenger 392 service center" }
+      { name: "Challenger 392",glyph: "🏎",  tag: "App",    color: ["#facc15","#78350f"], url: "https://challenger-392-service.netlify.app/",  desc: "Challenger 392 service center" },
+      { name: "Compass",       glyph: "🧭", tag: "App",    color: ["#10b981","#064e3b"], url: "https://compass-money.netlify.app/",           desc: "Personal finance command center" }
     ],
     offplate: [
       { name: "Audits",        glyph: "📋", tag: "GH",     color: ["#facc15","#854d0e"], url: "https://off-plate.github.io/audits/",          desc: "Client audit deliverables" },
